@@ -7,7 +7,7 @@ tags: ["language", "Ada", "Tutorial", "Linux", Kernel", Module"]
 draft: true
 ---
 # Prerequisites
-- Knowledge about the linux kernel module
+- Knowledge about linux's module
 - Knowledge about the Ada language
 # Version
 - Ubuntu 20.04.6 LTS
