@@ -9,6 +9,12 @@ draft: true
 # Prerequisites
 - Knowledge about the linux kernel module
 - Knowledge about the Ada language
+# Version
+- Ubuntu 20.04.6 LTS
+- Linux kernel 5.15.0
+- gcc 9.4.0
+- GPRBUILD Community 2019
+
 # Introduction
 Linux kernel module are typically written in C and since 2021 it is also
 possible to write them in Rust.
