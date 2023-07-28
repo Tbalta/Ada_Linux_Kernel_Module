@@ -1,3 +1,4 @@
+-- runtime/runtime.gpr
 -- Source: https://wiki.osdev.org/Ada_Runtime_Library
 library project Runtime is
    for Create_Missing_Dirs use "True";
