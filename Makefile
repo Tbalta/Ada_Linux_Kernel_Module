@@ -8,6 +8,7 @@ SRCDIR := src
 ADA_FILES := $(wildcard src/*.adb)
 ALI_FILES := $(patsubst src/%.adb,$(OBJDIR)/%.ali,$(ADA_FILES))
 ADA_OBJS := $(patsubst src/%.adb,$(OBJDIR)/%.o,$(ADA_FILES))
+LIBGNAT := runtime/build/adalib/libgnat.a
 
 # Name of the module
 obj-m += greet.o 
@@ -18,17 +19,19 @@ greet-objs := src/main.o src/helper.o obj/greet.o obj/init.o obj/gnat.o
 
 all: modules
 
+# Object file containing adainit and adafinal
 obj/init.o: $(ALI_FILES)
 	gnatbind -n -o init.adb  --RTS=runtime/build $(ALI_FILES)
 	gcc -c -o obj/init.o init.adb
 
-obj/gnat.o: $(ALI_FILES)
-	cp runtime/build/adalib/libgnat.a obj/gnat.o
+# Easiest way to link with the static library is to rename it as an object file
+obj/gnat.o: $(LIBGNAT) $(ALI_FILES)
+	cp  $(LIBGNAT) obj/gnat.o
 
 runtime:
 	$(MAKE) -C runtime
 
-$(ADA_OBJS) $(ALI_FILES): runtime
+$(ADA_OBJS) $(ALI_FILES) $(LIBGNAT): runtime
 	gprbuild
 
 # KBUILD require a .cmd file for each object file

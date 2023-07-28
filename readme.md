@@ -53,7 +53,8 @@ int main(void)
     return 0;
 }
 ```
-The `adainit` and `adafinal` are needed to initialize and finalize (destruct) the Ada runtime.\
+The `hello_ada` function is the one we exported from Ada.\
+The `adainit` and `adafinal` functions are needed to initialize and finalize (destruct) the Ada runtime.\
 It seems that the `adafinal` symbol is not always generated so we will create it as a weak symbol.
 ```c
 // helper.c
@@ -61,7 +62,6 @@ void adafinal(void) __attribute__((weak));
 void adafinal(void) {}
 ```
 
-The `hello_ada` function is the one we exported from Ada.\
 To compile this code we need to:
 - Create object file for the Ada and C code.
 - Create the object file containing the initialization and finalization code.
@@ -72,9 +72,8 @@ To create the object files we will use the `gcc` compiler.
 gcc -c hello_ada.adb -o hello_ada.o
 gcc -c main.c -o main.o
 ```
-Compiling `hello_ada.adb` also creates a `hello_ada.ali` file which contains the Ada interface of the code, it is also used to create the object file which contains the initialisation and finalisation code.
-
-The generation of the initialisation and finalisation code is done from the `.ali` file previously generated with the `gnatbind` tool.
+Compiling `hello_ada.adb` also creates a `hello_ada.ali` file which contains the Ada interface of the code.
+We will use this file with the `gnatbind` tool to create the code for the initialisation and finalisation procedure.
 ```bash
 # Generate the init.adb file, -n is used to indicate that the entry point is not located in ada.
 gnatbind -n hello_ada.ali -o init.adb
@@ -101,13 +100,13 @@ runtime
 └── src
 ```
 - `adalib` directory contain the `Ada Library Information Files (.ali)` and the static library.
--  `obj` Directory contain the object files, logs and also the .ali files.
+-  `obj` Directory contain the object files, logs and .ali files.
 - `src` and `adainclude` contain the source files.
 
 We are going to adapt the runtime present on our system to be compatible with the linux kernel.\
 For this first part of the tutorial we will build the minimal viable runtime.\
 We will need those files:
-- `system.ads` Contain important information about the runtime.
+- `system.ads` Contain importants parameters for the runtime.
 - `ada.ads` Main package that shoul be present.
 - `interfac.ads` Contain useful types definition.
 - `s-imgint.ad[sb]` Used for demontration purpose.
@@ -467,6 +466,7 @@ SRCDIR := src
 ADA_FILES := $(wildcard src/*.adb)
 ALI_FILES := $(patsubst src/%.adb,$(OBJDIR)/%.ali,$(ADA_FILES))
 ADA_OBJS := $(patsubst src/%.adb,$(OBJDIR)/%.o,$(ADA_FILES))
+LIBGNAT := runtime/build/adalib/libgnat.a
 
 # Name of the module
 obj-m += greet.o 
@@ -483,13 +483,13 @@ obj/init.o: $(ALI_FILES)
 	gcc -c -o obj/init.o init.adb
 
 # Easiest way to link with the static library is to rename it as an object file
-obj/gnat.o: $(ALI_FILES)
-	cp runtime/build/adalib/libgnat.a obj/gnat.o
+obj/gnat.o: $(LIBGNAT) $(ALI_FILES)
+	cp  $(LIBGNAT) obj/gnat.o
 
 runtime:
 	$(MAKE) -C runtime
 
-$(ADA_OBJS) $(ALI_FILES): runtime
+$(ADA_OBJS) $(ALI_FILES) $(LIBGNAT): runtime
 	gprbuild
 
 # KBUILD require a .cmd file for each object file
@@ -507,6 +507,7 @@ clean:
 	${RM} init.adb init.ads
 	${RM} -r $(OBJDIR)
 	${MAKE} -C runtime clean
+
 ```
 
 Now we can compile the project with `make` and load the module with `sudo insmod greet.ko`.
