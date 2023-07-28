@@ -20,12 +20,16 @@ Linux kernel module are typically written in C and since 2021 it is also
 possible to write them in Rust.
 Ada is an interesting language in this context because it is designed for safety and reliability. 
 It is always a good thing to use a language that will help us avoid crash and undefined behavior.
-In this tutorial we will see how to write a linux kernel module in ada as well as the pros and cons of Ada.
-
+In this tutorial we will see how to write a linux kernel module in ada.
 # Theory
-Because there isn't "yet" a support for Ada in the linux kernel we will have to use wrappers to call our Ada code.
+Since there's no support for Ada in the Linux kernel, we have to use wrappers to call our Ada code.
 
 Exporting Ada code to C is easy with the `Pragma Export` keyword.
+```ada
+-- hello_ada.ads
+procedure Hello_Ada;
+pragma Export (C, Hello_Ada, "hello_ada");
+```
 ```ada
 -- hello_ada.adb
 with Text_IO; use Text_IO;
@@ -33,8 +37,7 @@ with Text_IO; use Text_IO;
 procedure Hello_Ada is
 begin
 	Put_Line ("Hello from Ada");
-end procedure;
-pragma Export (Hello_Ada, C, "hello_ada");
+end Hello_Ada;
 ```
 And then we can call it from C:
 ```c
@@ -62,17 +65,16 @@ To create the object files we will use the `gcc` compiler.
 gcc -c hello_ada.adb -o hello_ada.o
 gcc -c main.c -o main.o
 ```
-The compilation of hello_ada.adb will also generate a `hello_ada.ali` file that contains the Ada interface of the code.
-This file is needed to create the object file containing the initialization and finalization code.
+Compiling `hello_ada.adb` also creates a `hello_ada.ali` file which contains the Ada interface of the code, it is also used to create the object file which contains the initialisation and finalisation code.
 
-To create the object file containing the initialization and finalization code we will use the `gnatbind` tools with the ali file generated earlier.
+The generation of the initialisation and finalisation code is done from the `.ali` file previously generated with the `gnatbind` tools.
 ```bash
 # Generate the init.adb file, -n is used to indicate that the entry point is not located in ada.
 gnatbind -n hello_ada.ali -o init.adb
 gcc -c init.adb -o init.o
 ```
 
-Then we just need to link all the object files together with the Ada runtime.
+To build the executable, we simply link all the objects together against the Ada library.
 ```bash
 gcc -o hello_ada main.o hello_ada.o init.o -lgnat
 ```
