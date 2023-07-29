@@ -2,6 +2,7 @@
 #include <linux/slab.h> // kmalloc, kfree
 
 
+// pr_info is a macro, so we need to wrap it in a function
 void pr_info_wrapper (const char *txt, uint32_t len)
 {
     // The iso forbid variable length arrays, so we use kmalloc
