@@ -21,6 +21,7 @@ all: modules
 
 # Object file containing adainit and adafinal
 obj/init.o: $(ALI_FILES)
+    # Here --RTS is used to specify the path to the runtime
 	gnatbind -n -o init.adb  --RTS=runtime/build $(ALI_FILES)
 	gcc -c -o obj/init.o init.adb
 

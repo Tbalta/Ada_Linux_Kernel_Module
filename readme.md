@@ -1,6 +1,6 @@
 ---
 title: "Let's make a linux kernel module in Ada !"
-date: 2023-07-27T21:00:00+01:00
+date: 2023-07-29T11:00:00+01:00
 author: "Tanguy Baltazart"
 summary: "Realisation of a linux kernel module in Ada"
 tags: ["language", "Ada", "Tutorial", "Linux", Kernel", Module"]
@@ -459,7 +459,7 @@ pragma Normalize_Scalars;
 # Linking with KBUILD
 This is the last step, we need to:
 -	Create every object file needed.
--	Create and compile the elaboration procedure with `gnatbind`.
+-	Create and compile the `adainit` and `adafinal` procedure with `gnatbind` and `gcc`.
 -	Linking everything accordingly
 
 
@@ -490,6 +490,7 @@ all: modules
 
 # Object file containing adainit and adafinal
 obj/init.o: $(ALI_FILES)
+    # Here --RTS is used to specify the path to the runtime
 	gnatbind -n -o init.adb  --RTS=runtime/build $(ALI_FILES)
 	gcc -c -o obj/init.o init.adb
 
