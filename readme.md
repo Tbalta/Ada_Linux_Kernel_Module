@@ -24,7 +24,7 @@ In this tutorial we will see how to write a linux kernel module in ada.
 # Theory
 Since there's no support for Ada in the Linux kernel, we have to use wrappers to call our Ada code.
 
-Exporting Ada code to C is easy with the `Pragma Export` keyword.
+Interfacing Ada to C is easy with the `Pragma Export` and `Pragma Import` keyword.
 ```ada
 -- hello_ada.ads
 procedure Hello_Ada;
@@ -35,8 +35,12 @@ pragma Export (C, Hello_Ada, "hello_ada");
 with Text_IO; use Text_IO;
 
 procedure Hello_Ada is
+    -- Import the C function
+    procedure Hello_C;
+    pragma Import (C, Hello_C, "hello_c");
 begin
-	Put_Line ("Hello from Ada");
+    Hello_C;
+    Put_Line ("Hello from Ada");
 end Hello_Ada;
 ```
 And then we can call it from C:
@@ -45,6 +49,12 @@ And then we can call it from C:
 extern void adainit (void);
 extern void adafinal (void);
 extern void hello_ada(void);
+
+void hello_c(void)
+{
+    printf("Hello from C\n");
+}
+
 int main(void)
 {
     adainit();
@@ -71,6 +81,7 @@ To create the object files we will use the `gcc` compiler.
 ```bash
 gcc -c hello_ada.adb -o hello_ada.o
 gcc -c main.c -o main.o
+gcc -c helper.c -o helper.o
 ```
 Compiling `hello_ada.adb` also creates a `hello_ada.ali` file which contains the Ada interface of the code.
 We will use this file with the `gnatbind` tool to create the code for the initialisation and finalisation procedure.
@@ -82,7 +93,7 @@ gcc -c init.adb -o init.o
 
 To build the executable, we simply link all the objects together against the Ada library.
 ```bash
-gcc -o hello_ada main.o hello_ada.o init.o -lgnat
+gcc main.o helper.o hello_ada.o init.o -lgnat -o hello_ada
 ```
 
 # Implementation
@@ -314,12 +325,13 @@ MODULE_LICENSE("GPL v2");
 ```
 Nothing fancy here, we just call the Ada functions `adainit`, `ada_greet`, `ada_goodbye` and `adafinal` from the C module init and exit functions.
 
-We also need a helper that contains wrapper functions for the Ada code:
+Because `pr_info` is a macro, it doesn't have an associated symbol so it can't be imported into Ada, therefore we need to wrap it in a function.
+
 ```c
 // src/helper.c
 #include <linux/slab.h> // kmalloc, kfree
 
-
+// pr_info is a macro, so we need to wrap it in a function
 void pr_info_wrapper (const char *txt, uint32_t len)
 {
     // The iso forbid variable length arrays, so we use kmalloc
@@ -350,14 +362,13 @@ package Greet is
     procedure Ada_Goodbye;
     pragma Export (C, Ada_Goodbye, "ada_goodbye");
 
-    --  Import pr_info as a wrapper for the C function pr_info_wrapper
-    --  Note that System.Address can be considered as a void pointer.
-    --  Because in Ada strings are not null terminated, we also need to pass the length.
+    --  System.Address can be considered as a void pointer.
+    --  Ada's strings aren't null terminated so we need to indicate the length.
     procedure pr_info (msg : System.Address; len : Interfaces.Integer_32);
-    pragma Import (Ada, pr_info, "pr_info_wrapper");
-
+    pragma Import (C, pr_info, "pr_info_wrapper");
 end Greet;
 ```
+
 ```ada
 -- src/greet.adb
 with System;     use System;
